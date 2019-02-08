@@ -1,0 +1,154 @@
+<script src=lib1.js></script>
+
+<body bgcolor=black text=white link=white alink=white vlink=white>
+<center>
+<canvas id='canvas1' width=400 height=400></canvas>
+</center>
+</body>
+
+
+<!!-------- VERTEX SHADER: YOU PROBABLY DON'T WANT TO CHANGE THIS RIGHT NOW -------->
+
+<script id='my_vertex_shader' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.);
+      vPos = aPos;
+   }
+</script>
+
+
+<!!-------- FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK -------->
+
+<script id='my_fragment_shader' type='x-shader/x-fragment'>
+
+
+
+   uniform float uTime;   // TIME, IN SECONDS
+
+   varying vec3 vPos;     // -1 < vPos.x < +1
+                          // -1 < vPos.y < +1
+                          //      vPos.z == 0
+  
+   void main() {
+      float x = vPos.x;
+      float y = vPos.y;
+
+      float big_r = abs(.5*sin(uTime))+.5;;
+      float small_r = .7;
+
+      if (big_r < small_r) {
+           float temp = small_r;
+           small_r = big_r;
+           big_r = temp;
+      }
+      
+      float red = .0;
+      float green = .0;
+      float blue  = .0;
+
+      if(pow(x, 2.) + pow(y,2.) <= pow(big_r, 2.) && pow(x, 2.)+pow(y,2.)>= pow(small_r, 2.)) {
+            if (y >= .0 && x >= .4) red =.0;
+            else {
+                  if (y <= x && y >= -x ) {//blue
+                                           blue = 234./255.;
+                                           red = 17./255.;
+                                           green = 69./255.;
+                                          }
+                  if (y <= x && y <= -x) {//gren
+                                          green = 111./255.;
+                                          blue = 27./255.;
+                                          red = 11.2/255.;
+
+                                          }
+                  if (y >= x && y >= -x)  {//red
+                                           red = 214./255.;
+                                           green = 17.5/255.;
+                                           blue = 11./255.;
+                                          }
+                  if (y >= x && y <= -x)  { //yello
+                                           red = 247./255.;
+                                           blue = .1/255.;
+                                           green = 138./255.;
+                                          }
+            }
+      } else {
+            if (y < .0 && y > -.14 && x >- 0. && x < small_r) {
+                                           blue = 234./255.;
+                                           red = 17./255.;
+                                           green = 69./255.;
+                                                               }
+      }
+
+
+      vec3 color = vec3(red, green, blue);
+
+
+      gl_FragColor = vec4(sqrt(color), 1);
+   }
+
+
+</script>
+
+
+<!!-------- CREATE A PROPERLY DESCRIPTIVE TITLE BELOW -------->
+
+<script id='my_title' type='text/html'>
+Shrinken Google
+</script>
+
+
+<!!-------- HERE IS WHERE YOU CAN PROVIDE A LONGER TEXT DESCRIPTION -------->
+
+<script id='my_instructions' type='text/html'><font color=#b0b0b0>
+For this assignment, I wrote a fragment shader that displays the Google's Logo and use a sin function with the uTime to control the Logo's size dynamically.
+</script>
+
+
+<!!-------- YOU PROBABLY DON'T WANT TO CHANGE ANYTHING BELOW FOR NOW -------->
+   
+<script>
+var vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+    fs = fs.substring(1, fs.length);
+
+document.body.innerHTML = [''
+   ,'<center><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</center>'
+   ,'<TABLE cellspacing=0 cellpadding=0><TR>'
+   ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
+   ,'</TR><TR>'
+   ,'<table cellspacing=10>'
+   ,'<tr>'
+   ,'<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>'
+   ,'<td valign=top>'
+   ,'<textArea id=textArea spellcheck=false '
+   ,'style="font:16px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"'
+   ,'></textArea>'
+   ,'</td><td valign=top>' + document.body.innerHTML + '</td>'
+   ,'<td valign=top><font size=5>' + my_instructions.innerHTML + '</td>'
+   ,'</tr></table>'
+   ,'</TR></TABLE>'
+   ].join('');
+
+var i, text = fs.split('\n'), cols = 0;
+for (i = 0 ; i < text.length ; i++)
+   cols = Math.max(cols, text[i].length);
+
+textArea.rows = text.length;
+textArea.cols = cols;
+textArea.value = fs;
+textArea.style.backgroundColor = '#202020';
+textArea.style.color = 'white';
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
+
+var startTime = Date.now();
+
+function animate(gl) {
+   let time = (Date.now() - startTime) / 1000;
+   setUniform('1f', 'uTime', time);
+}
+
+gl_start(canvas1, vs, fs);
+</script>
+
