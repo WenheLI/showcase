@@ -1,0 +1,148 @@
+<script src=lib2.js></script>
+
+<body bgcolor=black text=white link=white alink=white vlink=white>
+<center>
+<canvas id='canvas1' width=400 height=400></canvas>
+</center>
+</body>
+
+
+<!!-------- VERTEX SHADER: YOU PROBABLY DON'T WANT TO CHANGE THIS RIGHT NOW -------->
+
+<script id='my_vertex_shader' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.);
+      vPos = aPos;
+   }
+</script>
+
+
+<!!-------- FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK -------->
+
+<script id='my_fragment_shader' type='x-shader/x-fragment'>
+
+
+   uniform float uTime;
+   varying vec3 vPos;
+  
+   float sphere(float x, float y, float r) {
+      float zz = r * r - x * x - y * y;
+      return sqrt(max(0., zz));
+   }
+  
+   void main() {
+      float c = 0.;
+  
+      // BUILD A FRACTAL TEXTURE USING
+      // NOISE THAT ANIMATES THROUGH Z
+  
+      float x = vPos.x;
+      float y = vPos.y;
+      
+      float z = sphere(x - sin(uTime), y - .1 - abs(sin(uTime*.5)), .4);
+      vec3 p = 8.0 * vec3(x, y, z);
+      float t = 1.0 + 0.5 * noise(p);
+      z = z * t;
+  
+      for (int n = 1 ; n <= 5 ; n++) {
+         float z = float(n);
+         vec3 p = vec3(x, y, z + 0.05 * uTime);
+         float frequency = pow(2., z);
+         c += noise(frequency*p)/frequency;
+      }
+  
+      float temp = 0.5;
+  
+          for (int n = 1 ; n <= 12 ; n++) {
+  
+  
+         float frequency = pow(4., float(n));
+  
+  
+         vec3 p = vec3(x, y, float(n));
+         temp += noise(frequency * p) / frequency;
+      }
+  
+      // CLOUDS SHOT WITH COLOR
+  
+      vec3 sky   = vec3(.1, .3, .9);
+      vec3 white = vec3(1.,1.,1.);
+      vec3 grey = vec3(.1);
+      vec3 yellow = vec3(sin(uTime),.9,.0);
+      vec3 pink  = vec3(1.,.5,.5);
+      vec3 cloud = mix(pink,white,c);
+      vec3 ground = mix(yellow , grey, temp);
+  
+      
+  
+      c = clamp(c + y + abs(sin(uTime*.5)) -.9 , 0.0, 1.0);
+      vec3 color = mix(sky, cloud, c);
+      temp = clamp(c - y, .0, 1.);
+      color = mix(color, ground, temp);
+      color += vec3(z, z*.5, z*.0);
+      gl_FragColor = vec4(sqrt(color), 1.0);
+   }</script>
+
+
+<!!-------- CREATE A PROPERLY DESCRIPTIVE TITLE BELOW -------->
+
+<script id='my_title' type='text/html'>
+Seasons
+</script>
+
+
+<!!-------- HERE IS WHERE YOU CAN PROVIDE A LONGER TEXT DESCRIPTION -------->
+
+<script id='my_instructions' type='text/html'><font color=#b0b0b0>
+For this assignment, I want to create an simulation of seasons' changing. The upper is the cloud, the lower part is the ground and the moving object is the sun. As the sun goes up and down. The ground changes its color between green and yellow, indicating the changing of seasons.
+</script>
+
+
+<!!-------- YOU PROBABLY DON'T WANT TO CHANGE ANYTHING BELOW FOR NOW -------->
+   
+<script>
+var vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+    fs = fs.substring(1, fs.length);
+
+document.body.innerHTML = [''
+   ,'<center><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</center>'
+   ,'<TABLE cellspacing=0 cellpadding=0><TR>'
+   ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
+   ,'</TR><TR>'
+   ,'<table cellspacing=10>'
+   ,'<tr>'
+   ,'<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>'
+   ,'<td valign=top>'
+   ,'<textArea id=textArea spellcheck=false '
+   ,'style="font:16px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"'
+   ,'></textArea>'
+   ,'</td><td valign=top>' + document.body.innerHTML + '</td>'
+   ,'<td valign=top><font size=5>' + my_instructions.innerHTML + '</td>'
+   ,'</tr></table>'
+   ,'</TR></TABLE>'
+   ].join('');
+
+var i, text = fs.split('\n'), cols = 0;
+for (i = 0 ; i < text.length ; i++)
+   cols = Math.max(cols, text[i].length);
+
+textArea.rows = text.length;
+textArea.cols = cols;
+textArea.value = fs;
+textArea.style.backgroundColor = '#202020';
+textArea.style.color = 'white';
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
+
+var startTime = Date.now();
+
+function animate(gl) {
+   let time = (Date.now() - startTime) / 1000;
+   setUniform('1f', 'uTime', time);
+}
+
+gl_start(canvas1, vs, fs);
+</script>
+
