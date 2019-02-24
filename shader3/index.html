@@ -1,0 +1,155 @@
+<script src=lib2.js></script>
+
+<body bgcolor=black text=white link=white alink=white vlink=white>
+<center>
+<canvas id='canvas1' width=500 height=500></canvas>
+</center>
+</body>
+
+
+<!! VERTEX SHADER: YOU PROBABLY DON'T WANT TO CHANGE THIS RIGHT NOW >
+
+<script id='my_vertex_shader' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.);
+      vPos = aPos;
+   }
+</script>
+
+
+<!!------ FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK ------>
+
+<script id='my_fragment_shader' type='x-shader/x-fragment'>
+   uniform float uTime;
+   varying vec3 vPos;
+   
+   float fl = 3.5;
+   vec4 sphere = vec4(0., 0., 0., .5);
+   
+   vec3 LDir[2], LColor[2];
+   
+   vec3 skyColor = vec3(.0,.0,.05);
+   
+   vec4 spheres[2];
+   
+   vec3 A[2];
+   vec3 D = vec3(.5,.2,.0);
+   vec3 S = vec3(.5,.5,.5);
+   float p = 10.;
+   
+   vec3 R(vec3 L,vec3 N) { return 2.*dot(L,N)*N - L; }
+   
+   float ray_sphere(vec3 V,vec3 W,vec4 S) {
+      vec3 V1 = V - S.xyz;
+      float first = -1. * dot(W, V1);
+      float second = sqrt(pow(dot(W, V1), 2.) - dot(V1, V1) + pow(S.w, 2.));
+      return min(first - second, first + second);
+   }
+   
+   void main() {
+      vec3 V = vec3(0., 0., fl);
+      vec3 W = normalize(vec3(vPos.x, vPos.y, -fl));
+   
+      A[0] = vec3(1.,.04,.0);
+      A[1] = vec3(.0,.3,.2);
+   
+      spheres[1] = vec4(0., 0., 0., .5);
+      spheres[0] = vec4(cos(uTime), sin(uTime), sin(uTime), .2);
+      vec3 color = skyColor;
+   
+      LDir[0] = normalize(vec3(spheres[0].xyz));
+      LColor[0] = vec3(1.,1.,.5);
+   
+      LDir[1] = normalize(vec3(spheres[0].xyz));
+      LColor[1] =  vec3(1.,1.,.5);
+      for (int i = 0; i < 2; i++) {
+             float t = ray_sphere(V, W, spheres[i]);
+      if (t >= 0.) {
+   
+   
+         vec3 P = V + t * W;
+         vec3 N = normalize(P - sphere.xyz);
+   
+         N += .2 * vec3(10. * noise(30. * P),
+                        noise(30. * P + vec3(100.,0.,0.)),
+                        noise(30. * P + vec3(200.,0.,0.)));
+         N = normalize(N);
+         
+        
+         float texture = 1.;//.5 + .5 * noise(20. * P);
+         
+         if (i == 0) {
+             for ( int i = 0; i < 5; i++)
+               texture = .2 + .2 * noise(vec3(uTime, uTime, uTime));
+         }    
+   
+         color = A[i] * texture;
+   
+         color += LColor[i] * D * max(0., dot(LDir[i], N)) * texture;
+         color += LColor[i] * S * pow(max(0., dot(R(LDir[i],N), -W)), p);
+         
+      }
+      }
+   
+      gl_FragColor = vec4(sqrt(color), 1.0);
+   }
+   
+</script>
+
+
+<!!------ CREATE A PROPERLY DESCRIPTIVE TITLE BELOW ------>
+
+<script id='my_title' type='text/html'>
+<font face=helvetica>&nbsp;<br>Sun & Earth
+</script>
+
+
+<!!------ YOU PROBABLY DON'T WANT TO CHANGE ANYTHING BELOW FOR NOW ------>
+   
+<script>
+var vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+    fs = fs.substring(1, fs.length);
+
+document.body.innerHTML = [''
+   ,'<table><tr>'
+   ,'<td><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</td>'
+   ,'</tr></table>'
+   ,'<TABLE cellspacing=0 cellpadding=0><TR>'
+   ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
+   ,'</TR><TR>'
+   ,'<table cellspacing=10>'
+   ,'<tr>'
+   ,'</td><td valign=top>' + document.body.innerHTML + '</td>'
+   ,'<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>'
+   ,'<td valign=top>'
+   ,'<textArea id=textArea spellcheck=false '
+   ,'style="font:20px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"'
+   ,'></textArea>'
+   ,'</tr></table>'
+   ,'</TR></TABLE>'
+   ].join('');
+
+var i, text = fs.split('\n'), cols = 0;
+for (i = 0 ; i < text.length ; i++)
+   cols = Math.max(cols, text[i].length);
+
+textArea.rows = text.length;
+textArea.cols = cols;
+textArea.value = fs;
+textArea.style.backgroundColor = '#202020';
+textArea.style.color = 'white';
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
+
+var startTime = Date.now();
+
+function animate(gl) {
+   let time = (Date.now() - startTime) / 1000;
+   setUniform('1f', 'uTime', time);
+}
+
+gl_start(canvas1, vs, fs);
+</script>
+
