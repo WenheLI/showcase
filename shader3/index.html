@@ -72,8 +72,8 @@
          vec3 P = V + t * W;
          vec3 N = normalize(P - sphere.xyz);
    
-         N += .2 * vec3(10. * noise(30. * P),
-                        noise(30. * P + vec3(100.,0.,0.)),
+         N += .2 * vec3(10. * noise(uTime * P),
+                        noise(30. * P + vec3(uTime,uTime,0.)),
                         noise(30. * P + vec3(200.,0.,0.)));
          N = normalize(N);
          
@@ -96,13 +96,14 @@
       gl_FragColor = vec4(sqrt(color), 1.0);
    }
    
+
 </script>
 
 
 <!!------ CREATE A PROPERLY DESCRIPTIVE TITLE BELOW ------>
 
 <script id='my_title' type='text/html'>
-<font face=helvetica>&nbsp;<br>Sun & Earth
+<font face=helvetica>&nbsp;<br>Changing of the Earth (Watch it)
 </script>
 
 
