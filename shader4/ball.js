@@ -1,13 +1,13 @@
 class Ball {
-    constructor(pos, r, mass=5) {
+    constructor(pos, r, mass=10) {
         this.pos = pos;
         this.rad = r;
-        let X = Math.random()/100;
-        let Y = Math.random()/100;
-        let Z = Math.random()/100;
+        let X = Math.random()/200;
+        let Y = Math.random()/200;
+        let Z = Math.random()/200;
         this.vel = {X, Y, Z};
         this.acc = {X:0, Y:0, Z:0};
-        this.G = .4;
+        this.G = .9;
         this.mass = mass;
     }
 
@@ -45,7 +45,7 @@ class Ball {
 
         strength = strength % 1;
 
-        strength /= 300;
+        strength /= 200;
 
 
         return {X: force.X*strength, Y: force.Y*strength, Z: force.Z*strength}
