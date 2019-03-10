@@ -1,0 +1,347 @@
+<script src=lib3.js></script>
+
+<body bgcolor=black text=white link=white alink=white vlink=white>
+<center>
+<canvas id='canvas1' width=500 height=500></canvas>
+</center>
+</body>
+
+
+<!! VERTEX SHADER >
+
+<script id='my_vertex_shader' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   varying   vec3 vPos;
+   void main() {
+      gl_Position = vec4(aPos, 1.);
+      vPos = aPos;
+   }
+</script>
+
+
+<!! FRAGMENT SHADER: THIS IS WHERE YOU WILL DO YOUR WORK >
+
+<script id='my_fragment_shader' type='x-shader/x-fragment'>
+
+uniform mat3  uL;
+uniform vec3  uMouse;
+uniform vec2  rotate;
+uniform vec3  scaleFac;
+uniform vec3  uPos;
+
+
+uniform float uTime;
+uniform vec4  uCubePlanes[6];
+uniform vec4  uOctahedronPlanes[8];
+uniform vec4 uTriPlanes[5];
+
+varying vec3  vPos;
+
+float ray_plane(vec3 V, vec3 W, vec4 plane) {
+   return -(dot(plane.xyz, V) + plane.w) / dot(plane.xyz, W);
+}
+
+// IF THE RAY HITS THE CUBE, RETURN [ normal.x, normal.y, normal.z, t ] AS A vec4.
+vec4 rayTri(vec3 V, vec3 W, mat4 M) {
+   float tIn = -1., tOut = 1000.;
+   vec3 N;
+   for (int i = 0 ; i < 5 ; i++) {
+      vec4 plane = uTriPlanes[i] * M;
+      float t = ray_plane(V, W, plane);
+      if (dot(W, plane.xyz) > 0.)
+         tOut = min(tOut, t);
+      else if (t > tIn) {
+         tIn = t;
+	 N = plane.xyz;
+      }
+   }
+   return vec4(normalize(N), tIn < tOut ? tIn : -1.);
+}
+
+
+
+vec4 rayCube(vec3 V, vec3 W, mat4 M) {
+   float tIn = -1., tOut = 1000.;
+   vec3 N;
+   for (int i = 0 ; i < 6 ; i++) {
+      vec4 plane = uCubePlanes[i] * M;
+      float t = ray_plane(V, W, plane);
+      if (dot(W, plane.xyz) > 0.)
+         tOut = min(tOut, t);
+      else if (t > tIn) {
+         tIn = t;
+	 N = plane.xyz;
+      }
+   }
+   return vec4(normalize(N), tIn < tOut ? tIn : -1.);
+}
+
+vec4 rayOctahedron(vec3 V, vec3 W, mat4 M) {
+   float tIn = -1., tOut = 1000.;
+   vec3 N;
+   for (int i = 0 ; i < 8 ; i++) {
+      vec4 plane = uOctahedronPlanes[i] * M;
+      float t = ray_plane(V, W, plane);
+      if (dot(W, plane.xyz) > 0.)
+         tOut = min(tOut, t);
+      else if (t > tIn) {
+         tIn = t;
+	 N = plane.xyz;
+      }
+   }
+   return vec4(normalize(N), tIn < tOut ? tIn : -1.);
+}
+
+mat4 inverse(mat4 m) {
+   float x = dot(m[0],m[0]), y = dot(m[1],m[1]), z = dot(m[2],m[2]);
+   return mat4(m[0].x / x, m[1].x / y, m[2].x / z, 0.,
+               m[0].y / x, m[1].y / y, m[2].y / z, 0.,
+               m[0].z / x, m[1].z / y, m[2].z / z, 0.,
+       -dot(m[0],m[3])/x, -dot(m[1],m[3])/y, -dot(m[2],m[3])/z, 1.);
+}
+
+mat4 identity() { return mat4(1.,0.,0.,0., 0.,1.,0.,0., 0.,0.,1.,0., 0.,0.,0.,1.); }
+mat4 scale(float x,float y,float z) { return mat4(x,0.,0.,0., 0.,y,0.,0., 0.,0.,z,0., 0.,0.,0.,1.); }
+mat4 translate(float x,float y,float z) { return mat4(1.,0.,0.,0., 0.,1,0.,0., 0.,0.,1,0., x,y,z,1.); }
+
+
+mat4 rotX(float theta) {
+   float c = cos(theta), s = sin(theta);
+   return mat4(1.,0.,0.,0.,
+               0., c, s,0.,
+               0.,-s, c,0.,
+               0.,0.,0.,1.);
+}
+
+mat4 rotZ(float theta) {
+   float c = cos(theta), s = sin(theta);
+   return mat4( c, s,0.,0.,
+               -s, c,0.,0.,
+	       0.,0.,1.,0.,
+	       0.,0.,0.,1.);
+}
+
+mat4 rotY(float theta) {
+   float c = cos(theta), s = sin(theta);
+   return mat4( c,0.,s,0.,
+                0.,1.,0.,0.,
+	             -s,0.,c,0.,
+	             0.,0.,0.,1.);
+}
+
+float fl = 3.5;
+vec3 skyColor = vec3(.0,.0,.5);
+
+void main() {
+   vec3 V = vec3(0., 0., fl);
+   vec3 W = normalize(vec3(vPos.x, vPos.y, -fl));
+
+   vec3 color = skyColor;
+   float t;
+
+   float x = .5 + .5 * uMouse.x;
+   float y = .5 + .5 * uMouse.y;
+   mat4 triT = inverse(
+              rotX(rotate.x)*
+              rotY(rotate.y)*
+              scale(scaleFac.x,scaleFac.y, scaleFac.z)*
+              translate(uPos.x, uPos.y, uPos.z)
+            );
+
+   vec4 tri = rayTri(V, W, triT);
+   if (tri.w > 0.)
+      color = uL[1] * (.1 + max(0., dot(tri.xyz, uL[0])));
+
+
+   // WHEN THE MOUSE IS PRESSED,
+   // SHOW THE CURSOR AS A SMALL RED DOT.
+
+   if (uMouse.z > 0.) {
+      t = ray_sphere(V, W, vec4(uMouse.xy,0.,.05));
+      if (t > 0.)
+         color = vec3(1.,0.,0.);
+   }
+
+   gl_FragColor = vec4(sqrt(color), 1.0);
+}
+</script>
+
+<!! CREATE A PROPERLY DESCRIPTIVE TITLE BELOW >
+
+<script id='my_title' type='text/html'>
+<font face=helvetica>&nbsp;<br>TUMBLING OCTAHEDRON
+</script>
+
+
+<!! GENERAL HTML SUPPORT >
+   
+<script>
+var vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+    fs = fs.substring(1, fs.length);
+
+document.body.innerHTML = [''
+   ,'<table><tr>'
+   ,'<td><font size=6 color=gray face=helvetica><br><a href=index1.html>[prev]</a>&nbsp;&nbsp;&nbsp;</td>'
+   ,'<td><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</td>'
+   ,'<td><font size=6 color=gray face=helvetica><br>&nbsp;&nbsp;&nbsp;<!!a href=index3.html>[next]<!!/a></td>'
+   ,'</tr></table>'
+   ,'<TABLE cellspacing=0 cellpadding=0><TR>'
+   ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
+   ,'</TR><TR>'
+   ,'<table cellspacing=10>'
+   ,'<tr>'
+   ,'</td><td valign=top>' + document.body.innerHTML + '</td>'
+   ,'<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>'
+   ,'<td valign=top>'
+   ,'<textArea id=textArea spellcheck=false '
+   ,'style="font:20px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"'
+   ,'></textArea>'
+   ,'</tr></table>'
+   ,'</TR></TABLE>'
+   ].join('');
+
+var i, text = fs.split('\n'), cols = 0;
+for (i = 0 ; i < text.length ; i++)
+   cols = Math.max(cols, text[i].length);
+
+textArea.rows = 30;
+textArea.cols = cols + 2;
+textArea.value = fs;
+textArea.style.backgroundColor = '#202020';
+textArea.style.color = 'white';
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
+
+var startTime = Date.now();
+
+function dot(a, b) {
+   let d = 0;
+   for (let i = 0 ; i < a.length ; i++)
+      d += a[i] * b[i];
+   return d;
+}
+
+function normalize(v) {
+   let s = Math.sqrt(dot(v, v));
+   for (let i = 0 ; i < v.length ; i++)
+      v[i] /= s;
+   return v;
+}
+
+
+let rotate = [0, 0];
+let scale = [.2, .2, .2];
+let isBacking = false;
+let isHovering = false;
+let isTyping = false;
+let isPosBacking = false;
+let pos = [0, 0, 0];
+
+let canvas = document.getElementById("canvas1");
+canvas.addEventListener("mousemove", (e) => {
+   let tempX = (e.clientX+1 - parseInt(canvas.getBoundingClientRect().x));
+   let tempY = (e.clientY -  parseInt(canvas.getBoundingClientRect().y));
+
+   isBacking = false;
+   isHovering = true;
+   tempX = Math.PI*(tempX - 250)/250;
+   tempY = -Math.PI*(tempY - 250)/250;
+   rotate = [tempX, tempY, 0];
+});
+
+canvas.addEventListener('mouseout', () => {
+   isBacking = true;
+   isHovering = false;
+});
+
+document.body.addEventListener("mousewheel", (e) => {
+   if (isHovering) {
+      scale.forEach((it, index) => {
+         scale[index] += e.deltaY / 5000;
+         scale[index] = Math.max(.05, scale[index]);
+         scale[index] = Math.min(.8, scale[index]);
+      });
+      e.preventDefault();
+   }
+});
+
+document.body.addEventListener("keydown", (event) => {
+   if (!isTyping) {
+      if (event.key === 'a') pos[0] -= .1;
+      else if (event.key === 'd') pos[0] += .1;
+      else if (event.key === 'w') pos[1] += .1;
+      else if (event.key === 's') pos[1] -= .1;
+      else if (event.key === 'z') pos[2] += .1;
+      else if (event.key === 'c') pos[2] -= .1;
+      else if (event.key === 'r') isPosBacking = true;
+   }
+});
+
+document.getElementById("textArea").addEventListener("focus", (e) => {
+   isTyping = true;
+});
+document.getElementById("textArea").addEventListener("blur", (e) => {
+   isTyping = false;
+})
+
+function animate(gl) {
+   let time = (Date.now() - startTime) / 1000;
+   setUniform('3fv', 'scaleFac', [scale[0], scale[1], scale[2]]);
+   setUniform('3fv', 'uPos', [pos[0], pos[1], pos[2]]);
+   setUniform('3fv', 'uMouse', canvas1.mouseInfo);
+   if (isBacking) {
+      for (let i = 0; i < 3; i++) {
+         rotate[i] =  (rotate[i] + 0)/1.05;
+      }
+      if(Math.abs(rotate[0] - 0) <= .01 && Math.abs(rotate[1] - 0) <= .01 ) {
+         isBacking = false;
+         rotate = [0, 0, 0];
+      }
+   }
+
+   if (isPosBacking) {
+      for (let i = 0; i < 3; i++) {
+         pos[i] =  (pos[i] + 0)/1.05;
+      }
+      if(Math.abs(pos[0] - 0) <= .01 && Math.abs(pos[1] - 0) <= .01 ) {
+         isPosBacking = false;
+         pos = [0, 0, 0];
+      }
+   }
+
+   setUniform('2fv', 'rotate', [-rotate[1], -rotate[0]]);
+
+   setUniform('1f', 'uTime', time);
+   {
+      setUniform('Matrix3fv', 'uL', false, [.57,.57,.57, 1,1,1, 0,0,0]);
+      setUniform('4fv', 'uCubePlanes', [ -1,0,0,-.5,
+                                          0,-1,0,-1, 
+                                          0,0,-1,-.5,
+                                          1,0,0,-.5, 
+                                          0, 1,0,-1,
+                                          0,0, 1,-.5 ]);
+      let z = .5 + .5 * canvas1.mouseInfo[0];
+      setUniform('4fv', 'uOctahedronPlanes', [
+         -1,-1,-1,-1,
+          1,-1,-1,-1,
+         -1, 1,-1,-1,   
+          1, 1,-1,-1,
+         -1,-1, 1,-1,
+          1,-1, 1,-1,
+         -1, 1, 1,-1,
+          1, 1, 1,-1,
+      ]);
+
+      setUniform('4fv', 'uTriPlanes', [
+         -1,-1, 0,-1,
+          1,-1, 0,-1,
+         -1, 0,-1,-1,   
+          1, 0,-1,-1,
+          0, 1, 1,-1,
+      ]);
+   }
+}
+
+gl_start(canvas1, vs, fs);
+</script>
+
