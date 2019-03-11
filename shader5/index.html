@@ -4,6 +4,11 @@
 <center>
 <canvas id='canvas1' width=500 height=500></canvas>
 </center>
+<p>
+   In this assignment, you can use your mouse to rotate the polygon, use your mousewheel or touchpad to zoom in/out it and use <b>w</b>,
+   <b>a</b>,<b>s</b>,<b>d</b>,<b>z</b>,<b>c</b> to move the polygon around. If you want to reset the translation of the polygon press <b>r</b>, if you want to reset the rotation move the mouse out of the canvas.
+   In addition, the texture can change with the rotate angle.
+</p>
 </body>
 
 
@@ -149,8 +154,12 @@ void main() {
             );
 
    vec4 tri = rayTri(V, W, triT);
-   if (tri.w > 0.)
+   float texture = .5 + .5 * noise(V + tri.w * W*rotate.x*20.+1.);
+
+   if (tri.w > 0.) {
       color = uL[1] * (.1 + max(0., dot(tri.xyz, uL[0])));
+      color *= texture;
+   }
 
 
    // WHEN THE MOUSE IS PRESSED,
@@ -182,9 +191,7 @@ var vs = my_vertex_shader.innerHTML,
 
 document.body.innerHTML = [''
    ,'<table><tr>'
-   ,'<td><font size=6 color=gray face=helvetica><br><a href=index1.html>[prev]</a>&nbsp;&nbsp;&nbsp;</td>'
-   ,'<td><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</td>'
-   ,'<td><font size=6 color=gray face=helvetica><br>&nbsp;&nbsp;&nbsp;<!!a href=index3.html>[next]<!!/a></td>'
+   ,'<td><font size=6 color=#b0b0b0>' + "Obervation" + '</td>'
    ,'</tr></table>'
    ,'<TABLE cellspacing=0 cellpadding=0><TR>'
    ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
@@ -303,7 +310,7 @@ function animate(gl) {
       for (let i = 0; i < 3; i++) {
          pos[i] =  (pos[i] + 0)/1.05;
       }
-      if(Math.abs(pos[0] - 0) <= .01 && Math.abs(pos[1] - 0) <= .01 ) {
+      if(Math.abs(pos[0] - 0) <= .01 && Math.abs(pos[1] - 0) <= .01 && Math.abs(pos[2] - 0) <= .01 ) {
          isPosBacking = false;
          pos = [0, 0, 0];
       }

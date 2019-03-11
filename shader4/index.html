@@ -187,12 +187,12 @@ let vel = {X: .01, Y: 0.01};
 let pos = {X: 0, Y:0, Z: 3.5};
 
 document.addEventListener("keydown", (event) => {
-   if (event.key === 'a') pos.X -= .01;
-   else if (event.key === 'd') pos.X += .01;
-   else if (event.key === 'w') pos.Y += .01;
-   else if (event.key === 's') pos.Y -= .01;
-   else if (event.key === 'z') pos.Z += .01;
-   else if (event.key === 'c') pos.Z -= .01;
+   if (event.key === 'a') pos.X -= 1;
+   else if (event.key === 'd') pos.X += 1;
+   else if (event.key === 'w') pos.Y += 1;
+   else if (event.key === 's') pos.Y -= 1;
+   else if (event.key === 'z') pos.Z += 1;
+   else if (event.key === 'c') pos.Z -= 1;
 });
 
 let canvas = document.getElementById("canvas1");
