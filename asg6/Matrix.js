@@ -17,6 +17,65 @@ class Matrix {
         return this.stacks[this.sp];
     }
 
+    scale(...numOrArr) {
+        const tempMatrix = this.__deepCopy(this.IDENTITY);
+
+        if (numOrArr.length === 1) numOrArr = numOrArr[0];
+
+        if (Array.isArray(numOrArr) && numOrArr.length === 3) numOrArr.forEach((it, index) => tempMatrix[index][index] = it);
+        else if (typeof numOrArr === 'number') [0, 1, 2].forEach((it) => tempMatrix[it][it] = numOrArr);
+        else throw new Error("Should only be matrix or number type");
+        this.__mul(tempMatrix);
+        return this.stacks[this.sp];
+
+    }
+
+    rotateX(theta) {
+        if (typeof theta === 'number') {
+            const tempMatrix = this.__deepCopy(this.IDENTITY);
+            const c = Math.cos(theta);
+            const s = Math.sin(theta);
+            tempMatrix[1][1] = c;
+            tempMatrix[1][2] = s;
+            tempMatrix[2][1] = -s;
+            tempMatrix[2][2] = c;
+            this.__mul(tempMatrix);
+        } else throw new Error("Should only be matrix or number type");
+        return this.stacks[this.sp];
+    }
+
+    rotateY(theta) {
+        if (typeof theta === 'number') {
+            const tempMatrix = this.__deepCopy(this.IDENTITY);
+            const c = Math.cos(theta);
+            const s = Math.sin(theta);
+            tempMatrix[0][0] = c;
+            tempMatrix[0][2] = -s;
+            tempMatrix[2][0] = s;
+            tempMatrix[2][2] = c;
+            this.__mul(tempMatrix);
+        } else throw new Error("Should only be matrix or number type");
+        return this.stacks[this.sp];
+    }
+
+    rotateZ(theta) {
+        if (typeof theta === 'number') {
+            const tempMatrix = this.__deepCopy(this.IDENTITY);
+            const c = Math.cos(theta);
+            const s = Math.sin(theta);
+            tempMatrix[0][0] = c;
+            tempMatrix[0][1] = s;
+            tempMatrix[1][0] = -s;
+            tempMatrix[1][1] = c;
+            this.__mul(tempMatrix);
+        } else throw new Error("Should only be matrix or number type");
+        return this.stacks[this.sp];
+    }
+
+    identity() {
+        return this.__deepCopy(this.IDENTITY);
+    }
+
 
     __deepCopy(matrix) {
         const temp = [];

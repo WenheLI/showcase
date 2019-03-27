@@ -1,5 +1,57 @@
 <html>
+    <head>
+        <title>Matrix Class</title>
+        <link rel="stylesheet"
+            href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/default.min.css">
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script>
+
+    </head>
     <body>
+        <p>The Matrix class is running in this website right now. Below is some usage about the Matrix class in detail.</p>
+        <p>You try to call these methods inside the console.</p>
+        <pre><code class="javascript">
+            let matrix = new Matrix();
+
+            let deg = Math.PI;
+
+            matrix.rotateX(deg); // Rotate with X in certain degree and it will return the current matrix.
+            matrix.rotateY(deg); // Rotate with X in certain degree and it will return the current matrix.
+            matrix.rotateZ(deg); // Rotate with X in certain degree and it will return the current matrix.
+
+            // You can use three ways to call the translate function
+            matrix.translate(x, y, z);
+            matrix.translate([x, y, z]);
+            matrix.translate(t);
+
+            // You can use three ways to call the scale function
+            matrix.scale(x, y, z);
+            matrix.scale([x, y, z]);
+            matrix.scale(t);
+
+            matrix.identity(); // it will return an identity matrix
+
+            // You can also do matrix calculations with the current matrix that the stack pointer points by
+
+            //add
+            matrix.__add([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]);
+            // Or
+            matrix.__add(1); // it adds one to all the elements 
+
+            //sub
+            matrix.__sub([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]);
+            // Or
+            matrix.__sub(1); // it subs one to all the elements 
+
+            //multiple
+            matrix.__mul([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]);
+            // Or
+            matrix.__mul(1); // it multiples one to all the elements 
+
+            //divide
+            matrix.__div(1); // it divides one to all the elements 
+        </code></pre>
+
         <script src="./Matrix.js"></script>
     </body>
 </html>
