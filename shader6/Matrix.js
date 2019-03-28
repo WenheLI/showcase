@@ -1,8 +1,12 @@
-class Matrix {
+class Mat4 {
     constructor() {
         this.IDENTITY = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
         this.stacks = [this.IDENTITY];
         this.sp = 0;
+    }
+
+    value() {
+        return this.stacks[this.sp].reduce((prev, curr) => prev.concat(curr), []);
     }
 
     translate(...numOrArr) {
@@ -73,7 +77,15 @@ class Matrix {
     }
 
     identity() {
-        return this.__deepCopy(this.IDENTITY);
+        return this.stacks[this.sp] = this.__deepCopy(this.IDENTITY);
+    }
+
+    save() {
+        this.stacks[++this.sp] = this.__deepCopy(this.stacks[this.sp-1]);
+    }
+
+    restore() {
+        this.sp --;
     }
 
 
