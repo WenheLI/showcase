@@ -151,10 +151,9 @@ triMesh = createTriMesh(torus, 32, 32);
 
 let m = new Mat4();     
 m.identity();                                       // ANIMATE THE MATRIX FOR THIS FRAME.
-m.scale(.4);
+m.scale(.1, .5, 1);
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
-
    m.rotateY(.1);
    m.rotateX(Math.sin(time)/10);
    bgColor = [.5,.6,.7];    // SET BACKGROUND COLOR
