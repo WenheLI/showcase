@@ -1,7 +1,7 @@
 class Mat4 {
     constructor() {
         this.IDENTITY = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
-        this.stacks = [this.IDENTITY];
+        this.stacks = [];
         this.sp = 0;
     }
 

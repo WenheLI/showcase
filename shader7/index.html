@@ -1,5 +1,5 @@
-<script src=lib4.js></script>
-<script src="Matrix.js"></script>
+<script src=lib5.js></script>
+
 <body bgcolor=black text=white link=white alink=white vlink=white>
 <center>
 <canvas id='canvas1' width=500 height=500></canvas>
@@ -60,7 +60,7 @@ void main() {
 <!!------------------- DESCRIPTIVE TITLE ------------------------>
 
 <script id='my_title' type='text/html'>
-<font face=helvetica>&nbsp;<br>PARAMETRICALLY DEFINED TRIANGLE MESH
+<font face=helvetica>&nbsp;<br>MULTIPLE ANIMATING OBJECTS
 </script>
 
 
@@ -145,26 +145,87 @@ let createTriMesh = (xyzFunc, nCols, nRows) => {
 }
 
 stride = 6;
-triMesh = createTriMesh(torus, 32, 32);
+let torus32x32 = createTriMesh(torus, 32, 32);
+let sphere16x8 = createTriMesh(sphere, 16,  8);
 
 //------------------------ ANIMATION --------------------------
 
-let m = new Mat4();     
-                                     // ANIMATE THE MATRIX FOR THIS FRAME.
+// YOU MIGHT WANT TO MOVE THESE SUPPORT FUNCTIONS INTO THE LIBRARY,
+// SO YOU CAN USE THEM LATER IN OTHER THINGS YOU CREATE.
+
+let m = new Mat4();                                    // DEFINE A NEW 4x4 MATRIX OBJECT.
+
+let plastic = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s,s,s,p, 0,0,0,0];
+} 
+
+let metal = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s*r,s*g,s*b,p, 0,0,0,0];
+} 
+
+let normalize = v => {
+   let s = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+   return [v[0] / s, v[1] / s, v[2] / s];
+}
+
+let lights = [];
+
+let clearLights = () => lights = [];
+
+let addLight = (dir,color) => {
+   dir = normalize(dir);
+   let newLight = [dir[0],dir[1],dir[2], color[0],color[1],color[2], 0,0,0];
+   for (let n = 0 ; n < newLight.length ; n++)
+      lights.push(newLight[n]);
+}
+
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
-   m.identity();  
-   m.scale(Math.abs(Math.sin(time)));
-   m.rotateY(time);
-   bgColor = [.5,.6,.7];    // SET BACKGROUND COLOR
 
-   setUniform('Matrix4fv', 'uMat', false, m.value());  // SEND THE CURRENT MATRIX VALUE TO THE GPU.
    setUniform('3fv', 'uMouse', canvas1.mouseInfo);
    setUniform('1f', 'uTime', time);
    setUniform('1f', 'uFL', 3.5);
-   setUniform('Matrix4fv', 'uM', false, [.1,.1,.1,0, .5,.5,.5,0, 1,1,1,10, 0,0,0,0]);
-   setUniform('Matrix3fv', 'uL', false, [ .57, .57, .57, bgColor[0],bgColor[1],bgColor[2], 0,0,0,
-                                         -.57,-.57,-.57, .25,.1,.05, 0,0,0]);
+
+   // SPECIFY BACKGROUND COLOR AND LIGHT SOURCES
+
+   bgColor = [.5,.8,1];
+
+   lightDir = [Math.cos(3 * time),1,Math.sin(3 * time)];
+
+   clearLights();
+   addLight(lightDir, bgColor);
+   addLight([-1,-1,-1], [.25,.1,.05]);
+
+   setUniform('Matrix3fv', 'uL', false, lights);
+
+   // CLEAR EVERYTHING TO THE BACKGROUND COLOR
+
+   gl.clearColor(bgColor[0],bgColor[1],bgColor[2],1);
+
+   // ANIMATE AND DRAW ALL THE OBJECTS IN THE SCENE
+
+   m.identity();
+   m.rotateY(.5);
+   m.rotateX(time);
+   m.scale(.5);
+
+   drawMesh(m, torus32x32, metal(.9,.6,.1,5));
+
+   m.scale(.4);
+   m.rotateY(4 * time);
+   drawMesh(m, torus32x32, plastic(1,.1,.1));
+
+   m.scale(.4,.4,1);
+   drawMesh(m, sphere16x8, metal(.2,.2,.8));
+
+   m.identity();
+   m.translate(.5,.5,0);
+   m.scale(.1);
+   drawMesh(m, sphere16x8, plastic(1,1,1));
 }
 
 gl_start(canvas1, vs, fs);
