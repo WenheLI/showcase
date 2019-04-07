@@ -150,21 +150,12 @@ triMesh = createTriMesh(torus, 32, 32);
 //------------------------ ANIMATION --------------------------
 
 let m = new Mat4();     
-<<<<<<< HEAD
                                      // ANIMATE THE MATRIX FOR THIS FRAME.
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
    m.identity();  
    m.scale(Math.abs(Math.sin(time)));
    m.rotateY(time);
-=======
-m.identity();                                       // ANIMATE THE MATRIX FOR THIS FRAME.
-m.scale(.1, .5, 1);
-function animate(gl) {
-   let time = (Date.now() - startTime) / 1000;
-   m.rotateY(.1);
-   m.rotateX(Math.sin(time)/10);
->>>>>>> 163c2c244e56d084b49999f470c882b0738a2cd2
    bgColor = [.5,.6,.7];    // SET BACKGROUND COLOR
 
    setUniform('Matrix4fv', 'uMat', false, m.value());  // SEND THE CURRENT MATRIX VALUE TO THE GPU.
