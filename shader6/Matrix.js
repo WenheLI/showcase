@@ -1,7 +1,11 @@
 class Mat4 {
     constructor() {
         this.IDENTITY = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+<<<<<<< HEAD
         this.stacks = [];
+=======
+        this.stacks = [this.__deepCopy(this.IDENTITY)];
+>>>>>>> 163c2c244e56d084b49999f470c882b0738a2cd2
         this.sp = 0;
     }
 
