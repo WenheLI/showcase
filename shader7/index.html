@@ -116,7 +116,7 @@ let r0 = 1, r1 = .4;
 
 let torus = (u,v) => {
    let theta = 2 * Math.PI * u, ct = Math.cos(theta), st = Math.sin(theta);
-   let phi   = 10 * 2 * Math.PI * v, cp = Math.cos(phi  ), sp = Math.random() * Math.sin(phi  );
+   let phi   = 2 * Math.PI * v, cp = Math.cos(phi), sp = Math.sin(phi  );
 
    return [ ct * (r0 + r1 * cp), st * (r0 + r1 * cp), r1 * sp,
             ct * cp, st * cp, sp ];
@@ -146,7 +146,7 @@ let createTriMesh = (xyzFunc, nCols, nRows) => {
 
 stride = 6;
 let torus32x32 = createTriMesh(torus, 32, 32);
-let sphere16x8 = createTriMesh(sphere, 16,  8);
+let sphere16x8 = createTriMesh(sphere, 32,  32);
 
 //------------------------ ANIMATION --------------------------
 
@@ -154,6 +154,27 @@ let sphere16x8 = createTriMesh(sphere, 16,  8);
 // SO YOU CAN USE THEM LATER IN OTHER THINGS YOU CREATE.
 
 let m = new Mat4();                                    // DEFINE A NEW 4x4 MATRIX OBJECT.
+
+let rotate = [0, 0, 0];
+let canvas = document.getElementById("canvas1");
+let isBacking = false;
+let isHover = false;
+
+canvas.addEventListener("mousemove", (e) => {
+   let tempX = (e.clientX+1 - parseInt(canvas.getBoundingClientRect().x));
+   let tempY = (e.clientY -  parseInt(canvas.getBoundingClientRect().y));
+   isBacking = false;
+   isHover = true;
+
+   tempX = Math.PI*(tempX - 250)/250;
+   tempY = -Math.PI*(tempY - 250)/250;
+   rotate = [tempX, tempY, 0];
+});
+
+canvas.addEventListener('mouseout', () => {
+   isBacking = true;
+   isHover = false;
+});
 
 let plastic = (r,g,b,p,s) => {
    if (p === undefined) p = 10;
@@ -188,8 +209,31 @@ let vel = .01;
 let acc = .001;
 let scaleFactor = .1;
 
+let limb = (x,y,z) => { // DRAW A LIMB AS
+      m.save();            // AN ELLIPSOID
+         m.scale(x,y,z);
+         drawMesh(m, sphere16x8, metal(.9,.6,.1,5));
+      m.restore();
+   }
+   let joint = () => {     // DRAW A JOINT AS A
+      m.save();            // SMALL RED SPHERE
+         m.scale(.05);
+         drawMesh(m, sphere16x8, metal(1.,0,0,5));
+      m.restore();
+   }
+
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
+
+   if (isBacking) {
+      for (let i = 0; i < 3; i++) {
+         rotate[i] =  (rotate[i] + 0)/1.05;
+      }
+      if(Math.abs(rotate[0] - 0) <= .01 && Math.abs(rotate[1] - 0) <= .01 ) {
+         isBacking = false;
+         rotate = [0, 0, 0];
+      }
+   }
 
    setUniform('3fv', 'uMouse', canvas1.mouseInfo);
    setUniform('1f', 'uTime', time);
@@ -212,32 +256,22 @@ function animate(gl) {
    gl.clearColor(bgColor[0],bgColor[1],bgColor[2],1);
 
    // ANIMATE AND DRAW ALL THE OBJECTS IN THE SCENE
-
-   // m.identity();
-   // m.rotateY(.5);
-   // m.rotateX(time);
-   // m.scale(.5);
-
-   // drawMesh(m, torus32x32, metal(.9,.6,.1,5));
-
-   // m.scale(.4);
-   // m.rotateY(4 * time);
-   // m.rotateX(4 * time);
-   // drawMesh(m, torus32x32, plastic(1,.1,.1));
-
-
    m.identity();
-   m.scale(scaleFactor);
-   m.translate(pos, 0, 0);
-   drawMesh(m, sphere16x8, metal(.2,.2,.8));
-
-   pos += vel;
-   vel += acc;
-   if (Math.abs(pos) >= 1/scaleFactor) {
-      pos = pos > 0? 1/scaleFactor : -1/scaleFactor;
-      vel *= -.5;
-      acc *= -1;
+   m.save();
+      m.scale(.4)
+      drawMesh(m, sphere16x8, metal(.9,.2,.2));
+   m.restore();
+   for (let i = 1; i <= 12; i++) {
+      m.save();
+      m.rotateX(-rotate[1]);
+      m.rotateY(rotate[0]);
+      if (!isHover) m.rotateZ(time)
+      m.translate(Math.cos(Math.PI*i/6), Math.sin(Math.PI*i/6), 0);
+      m.scale(.2);
+      drawMesh(m, sphere16x8, metal(.9,.5,.2));
+      m.restore();
    }
+   m.restore();
 }
 
 gl_start(canvas1, vs, fs);
