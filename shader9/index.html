@@ -1,0 +1,318 @@
+<script src=lib6.js></script>
+
+<body bgcolor=black text=white link=white alink=white vlink=white>
+<center>
+<canvas id='canvas1' width=800 height=800></canvas>
+</center>
+<p>
+   By clicking on the cavas, you can change the look of donut!
+</p>
+</body>
+
+<!!------------------------ VERTEX SHADER ------------------------>
+
+<script id='my_vertex_shader' type='x-shader/x-vertex'>
+   attribute vec3 aPos;
+   attribute vec3 aNor;
+   attribute vec2 aUV ; // WE HAVE ADDED A NEW ATTRIBUTE
+
+   uniform   mat4 uMat;
+
+   varying   vec3 vPos;
+   varying   vec3 vNor;
+   varying   vec2 vUV ; // AND A NEW VARYING VARIABLE
+
+   uniform float uFL;
+
+   mat4 inverse(mat4 m) {
+      float x = dot(m[0],m[0]), y = dot(m[1],m[1]), z = dot(m[2],m[2]);
+      return mat4(m[0].x / x, m[1].x / y, m[2].x / z, 0.,
+                  m[0].y / x, m[1].y / y, m[2].y / z, 0.,
+                  m[0].z / x, m[1].z / y, m[2].z / z, 0.,
+          -dot(m[0],m[3])/x, -dot(m[1],m[3])/y, -dot(m[2],m[3])/z, 1.);
+   }
+
+   void main() {
+      vec4 pos = uMat * vec4(aPos, 1.);
+      pos /= 1. - pos.z / uFL;
+      gl_Position = vec4(pos.xyz, 1.);
+
+      vPos = aPos;
+      vNor = (vec4(aNor,.0) * inverse(uMat)).xyz;
+
+      vUV  = aUV ; // IN THE VERTEX SHADER, WE JUST NEED TO COPY aUV into vUV
+   }
+</script>
+
+<!!-------------------- FRAGMENT SHADER --------------------------->
+
+<script id='my_fragment_shader' type='x-shader/x-fragment'>
+uniform float uFL;
+uniform mat3  uL[2];
+uniform mat4  uM;
+uniform float uTime;
+
+uniform sampler2D uSampler[1]; // WE NEED TO DECLARE THE TEXTURE SAMPLER
+
+uniform int state;
+
+varying vec3  vNor;
+varying vec3  vPos;
+varying vec2  vUV ;            // AND THE VECTOR CONTAINING THE VARYING UV VALUES.
+
+void main() {
+   vec3 normal = normalize(vNor);
+   vec3 R = reflect(vec3(0.,0.,-1.), normal);
+   vec2 uv = vUV;
+
+// UNCOMMENT THE LINE BELOW TO SEE TEXTURE ANIMATION WITHIN A FRAGMENT SHADER.
+   if (state == 0) {
+      uv.y += noise(vec3(cos(uTime/3.), sin(uTime/2.), cos(uTime/4.)));
+   }else {
+      uv.y += noise(vNor);
+      //uv.y += noise(vec3(cos(uTime/3.), sin(uTime/2.), cos(uTime/4.)));
+      uv.x += noise(vNor);
+   }
+
+
+   vec3 color = uM[0].rgb;
+   for (int n = 0 ; n < 2 ; n++)
+      color += uL[n][1] * (
+         uM[1].rgb * max(0.,dot(normal, uL[n][0])) +
+         uM[2].rgb * pow(max(0., dot(R, uL[n][0])), uM[2].a) );
+
+   color *= texture2D(uSampler[0], uv).xyz; // DO THE ACTUAL TEXTURE LOOK-UP.
+
+   gl_FragColor = vec4(sqrt(color), 1.0);
+}
+</script>
+
+<!!------------------- DESCRIPTIVE TITLE ------------------------>
+
+<script id='my_title' type='text/html'>
+<font face=helvetica>&nbsp;<br>TEXTURE MAPPING
+</script>
+
+
+<!!------------------ GENERAL HTML SUPPORT ---------------------->
+   
+<script>
+var vs = my_vertex_shader.innerHTML,
+    fs = my_fragment_shader.innerHTML;
+    fs = fs.substring(1, fs.length);
+
+document.body.innerHTML = [''
+   ,'<center><font size=6 color=#b0b0b0>' + my_title.innerHTML + '</center>'
+   ,'<TABLE cellspacing=0 cellpadding=0><TR>'
+   ,'<td width=50></td><td><font color=red size=5><div id=errorMessage>&nbsp;</div></font></td>'
+   ,'</TR><TR>'
+   ,'<table cellspacing=10>'
+   ,'<tr>'
+   ,'</td><td valign=top>' + document.body.innerHTML + '</td>'
+   ,'<td valign=top><font size=2 color=red><div id=errorMarker>&nbsp;</div></font></td>'
+   ,'<td valign=top>'
+   ,'<textArea id=textArea spellcheck=false '
+   ,'style="font:20px courier;outline-width:0;border-style:none;resize:none;overflow:scroll;"'
+   ,'></textArea>'
+   ,'</tr></table>'
+   ,'</TR></TABLE>'
+   ].join('');
+
+var i, text = fs.split('\n'), cols = 0;
+for (i = 0 ; i < text.length ; i++)
+   cols = Math.max(cols, text[i].length);
+
+textArea.rows = 30;
+textArea.cols = cols + 2;
+textArea.value = fs;
+textArea.style.backgroundColor = '#202020';
+textArea.style.color = 'white';
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); isFirstTime = true; }
+
+let startTime = Date.now();
+
+//------------------------- BUILDING PARAMETRIC MESH OBJECTS -------------------------
+
+let sphere = (u,v) => {
+   let theta = 2 * Math.PI * u,
+       phi = Math.PI * (v - .5);
+   let x = Math.cos(theta) * Math.cos(phi),
+       y = Math.sin(theta) * Math.cos(phi),
+       z = Math.sin(phi);
+   return [ x,y,z, x,y,z, u,v ];
+}
+
+let r0 = 1, r1 = .4;
+
+let torus = (u,v) => {
+   let theta = 2 * Math.PI * u, ct = Math.cos(theta), st = Math.sin(theta);
+   let phi   = 2 * Math.PI * v, cp = Math.cos(phi  ), sp = Math.sin(phi  );
+
+   return [ ct * (r0 + r1 * cp), st * (r0 + r1 * cp), r1 * sp,
+            ct * cp, st * cp, sp,    u,v ];
+}
+
+let createTriMesh = (xyzFunc, nCols, nRows) => {
+   let triMesh = [];
+   for (let row = 0 ; row < nRows ; row++) {
+      let v0 = row / nRows;
+      let v1 = (row+1) / nRows;
+
+      for (let col = 0 ; col <= nCols ; col++) {
+         let u = col / nCols;
+         if (row % 2)
+            u = 1 - u;
+
+         let p0 = xyzFunc(u, v0),
+             p1 = xyzFunc(u, v1);
+         for (let n = 0 ; n < p0.length ; n++)
+            triMesh.push(p0[n]);
+         for (let n = 0 ; n < p1.length ; n++)
+            triMesh.push(p1[n]);
+      }
+   }
+   return triMesh;
+}
+
+stride = 8;
+let torus32x32 = createTriMesh(torus, 32, 32);
+let sphere16x8 = createTriMesh(sphere, 16,  8);
+let sphere32x16 = createTriMesh(sphere, 32,  16);
+
+//------------------------ ANIMATION --------------------------
+let state = true;
+document.addEventListener('click', () => {
+   state = !state;
+});
+
+// YOU MIGHT WANT TO MOVE THESE SUPPORT FUNCTIONS INTO THE LIBRARY,
+// SO YOU CAN USE THEM LATER IN OTHER THINGS YOU CREATE.
+
+let m = new Mat4();                                    // DEFINE A NEW 4x4 MATRIX OBJECT.
+
+let plastic = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s,s,s,p, 0,0,0,0];
+} 
+
+let metal = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s*r,s*g,s*b,p, 0,0,0,0];
+} 
+
+let normalize = v => {
+   let s = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+   return [v[0] / s, v[1] / s, v[2] / s];
+}
+
+let lights = [];
+
+let clearLights = () => lights = [];
+
+let addLight = (dir,color) => {
+   dir = normalize(dir);
+   let newLight = [dir[0],dir[1],dir[2], color[0],color[1],color[2], 0,0,0];
+   for (let n = 0 ; n < newLight.length ; n++)
+      lights.push(newLight[n]);
+}
+
+// NAIVE ALGORITHM FOR EVALUATING BEZIER CURVES.
+// THIS IS EASIER TO UNDERSTAND, BUT CANNOT BE OPTIMIZED.
+
+let mix = (a,b,t) => a + t * (b - a);
+
+let evalBezier1 = (P, t) => {
+   let A = mix(P[0], P[1], t);
+   let B = mix(P[1], P[2], t);
+   let C = mix(P[2], P[3], t);
+
+   return mix ( mix(A,B,t), mix(B,C,t), t );
+}
+
+// BETTER ALGORITHM FOR EVALUATING BEZIER CURVES.
+// THIS CAN BE OPTIMIZED TO RUN VERY EFFICIENTLY,
+// IF C = mxv(bezierMatrix, P) IS DONE BEFOREHAND.
+
+let bezierMatrix = [ -1,3,-3,1, 3,-6,3,0, -3,3,0,0, 1,0,0,0 ];
+
+let mxv = (m, v) => {
+   let dst = [];
+   for (let i = 0 ; i < 4 ; i++) {
+      dst[i] = 0;
+      for (let j = 0 ; j < 4 ; j++)
+         dst[i] += m[i + 4*j] * v[j];
+   }
+   return dst;
+}
+
+let evalBezier = (P, t) => {
+   let C = mxv(bezierMatrix, P);
+/*
+   return t*t*t * C[0] + t*t * C[1] + t * C[2] + C[3];
+*/
+   return C[3] + t * (C[2] + t * (C[1] + t * C[0]));
+}
+
+let evalBezierSpline = (S, t) => {
+   let T = (t % 1) * S.length;
+   let i = Math.floor(T);
+   return evalBezier(S[i], T - i);
+}
+
+let isFirstTime = true;
+
+function animate(gl) {
+   let time = (Date.now() - startTime) / 1000;
+
+   setUniform('3fv', 'uMouse', canvas1.mouseInfo);
+   setUniform('1f', 'uTime', time);
+   setUniform('1i', 'state', state+0);
+
+   if (isFirstTime) {
+      isFirstTime = false;
+
+      setUniform('1f', 'uFL', 3.5);
+
+      // SPECIFY BACKGROUND COLOR AND LIGHT SOURCES
+
+      bgColor = [0,0,.1];
+      clearLights();
+      addLight([1,1,1], bgColor);
+      addLight([-1,-1,-1], [.25,.1,.05]);
+      setUniform('Matrix3fv', 'uL', false, lights);
+
+      setUniform('1iv', 'uSampler', [0]);
+
+      let image = new Image();
+      image.onload = () => {
+         try {
+	    gl.activeTexture (gl.TEXTURE0);
+	    gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+	    gl.pixelStorei   (gl.UNPACK_FLIP_Y_WEBGL, true);
+	    gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+	    gl.generateMipmap(gl.TEXTURE_2D);
+	 }
+	 catch(e) { console.log(e); }
+      }
+      image.src = 'donut.jpg';
+   }
+
+   // CLEAR EVERYTHING TO THE BACKGROUND COLOR
+
+   gl.clearColor(bgColor[0],bgColor[1],bgColor[2],1);
+
+   // CREATE A SINGLE ROTATING SPHERE.
+
+   m.save();
+      m.scale(.5);
+      m.rotateX(-Math.PI*.35);
+      m.rotateZ(.2 * time);
+      drawMesh(m, torus32x32, plastic(1,1,1));
+   m.restore();
+}
+
+gl_start(canvas1, vs, fs);
+</script>
+
