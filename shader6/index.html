@@ -1,8 +1,8 @@
-<script src=lib4.js></script>
-<script src="Matrix.js"></script>
+<script src=lib6.js></script>
+
 <body bgcolor=black text=white link=white alink=white vlink=white>
 <center>
-<canvas id='canvas1' width=500 height=500></canvas>
+<canvas id='canvas1' width=800 height=800></canvas>
 </center>
 </body>
 
@@ -11,9 +11,14 @@
 <script id='my_vertex_shader' type='x-shader/x-vertex'>
    attribute vec3 aPos;
    attribute vec3 aNor;
+   attribute vec2 aUV ; // WE HAVE ADDED A NEW ATTRIBUTE
+
    uniform   mat4 uMat;
+
    varying   vec3 vPos;
    varying   vec3 vNor;
+   varying   vec2 vUV ; // AND A NEW VARYING VARIABLE
+
    uniform float uFL;
 
    mat4 inverse(mat4 m) {
@@ -31,28 +36,51 @@
 
       vPos = aPos;
       vNor = (vec4(aNor,.0) * inverse(uMat)).xyz;
+
+      vUV  = aUV ; // IN THE VERTEX SHADER, WE JUST NEED TO COPY aUV into vUV
    }
 </script>
 
 <!!-------------------- FRAGMENT SHADER --------------------------->
 
 <script id='my_fragment_shader' type='x-shader/x-fragment'>
+const int NLIGHTS = 2;
 uniform float uFL;
-uniform mat3  uL[2];
+uniform mat3  uL[NLIGHTS];
 uniform mat4  uM;
+uniform float uTime;
+
+uniform sampler2D uSampler[3];
+
 varying vec3  vNor;
 varying vec3  vPos;
+varying vec2  vUV ;
 
 void main() {
    vec3 normal = normalize(vNor);
    vec3 R = reflect(vec3(0.,0.,-1.), normal);
 
-   vec3 color = uM[0].rgb;
-   for (int n = 0 ; n < 2 ; n++)
-      color += uL[n][1] * (
-         uM[1].rgb * max(0.,dot(normal, uL[n][0])) +
-         uM[2].rgb * pow(max(0., dot(R, uL[n][0])), uM[2].a) );
+   float t = .5 + .5 * sin(3. * uTime);
+   t = t * t * (3. - t - t);
 
+   vec3 dNormal1 = texture2D(uSampler[1], vUV * vec2(6.,3.)).xyz * 2. - 1.;
+   vec3 dNormal2 = texture2D(uSampler[2], vUV * vec2(6.,3.)).xyz * 2. - 1.;
+   vec3 dNormal = mix(dNormal1, dNormal2, t);
+   normal = normalize(normal + dNormal);
+
+   vec3 color = uM[0].rgb;
+   for (int n = 0 ; n < NLIGHTS ; n++) {
+      float d = max(0.,dot(normal, uL[n][0]));
+      color += uL[n][1] * (
+         uM[1].rgb * d * d +
+         uM[2].rgb * pow(max(0., dot(R, uL[n][0])), uM[2].a) );
+   }
+   color *= mix(vec3(1.,1.,1.),
+                texture2D(uSampler[0], vUV).xyz, .7);
+/*
+   color *= mix(vec3(1.,1.,1.),
+                texture2D(uSampler[1], vUV * vec2(6.,3.)).xyz, t);
+*/
    gl_FragColor = vec4(sqrt(color), 1.0);
 }
 </script>
@@ -60,7 +88,7 @@ void main() {
 <!!------------------- DESCRIPTIVE TITLE ------------------------>
 
 <script id='my_title' type='text/html'>
-<font face=helvetica>&nbsp;<br>PARAMETRICALLY DEFINED TRIANGLE MESH
+<font face=helvetica>&nbsp;<br>TEXTURE MAPPING
 </script>
 
 
@@ -97,7 +125,7 @@ textArea.cols = cols + 2;
 textArea.value = fs;
 textArea.style.backgroundColor = '#202020';
 textArea.style.color = 'white';
-textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); }
+textArea.onkeyup = function() { canvas1.setShaders(vs, this.value); isFirstTime = true; }
 
 let startTime = Date.now();
 
@@ -109,7 +137,7 @@ let sphere = (u,v) => {
    let x = Math.cos(theta) * Math.cos(phi),
        y = Math.sin(theta) * Math.cos(phi),
        z = Math.sin(phi);
-   return [ x,y,z, x,y,z ];
+   return [ x,y,z, x,y,z, u,v ];
 }
 
 let r0 = 1, r1 = .4;
@@ -119,7 +147,7 @@ let torus = (u,v) => {
    let phi   = 2 * Math.PI * v, cp = Math.cos(phi  ), sp = Math.sin(phi  );
 
    return [ ct * (r0 + r1 * cp), st * (r0 + r1 * cp), r1 * sp,
-            ct * cp, st * cp, sp ];
+            ct * cp, st * cp, sp,    u,v ];
 }
 
 let createTriMesh = (xyzFunc, nCols, nRows) => {
@@ -144,27 +172,146 @@ let createTriMesh = (xyzFunc, nCols, nRows) => {
    return triMesh;
 }
 
-stride = 6;
-triMesh = createTriMesh(torus, 32, 32);
+stride = 8;
+let torus32x32 = createTriMesh(torus, 32, 32);
+let sphere16x8 = createTriMesh(sphere, 16,  8);
+let sphere64x32 = createTriMesh(sphere, 64,  32);
 
 //------------------------ ANIMATION --------------------------
 
-let m = new Mat4();     
-                                     // ANIMATE THE MATRIX FOR THIS FRAME.
+// YOU MIGHT WANT TO MOVE THESE SUPPORT FUNCTIONS INTO THE LIBRARY,
+// SO YOU CAN USE THEM LATER IN OTHER THINGS YOU CREATE.
+
+let m = new Mat4();                                    // DEFINE A NEW 4x4 MATRIX OBJECT.
+
+let plastic = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s,s,s,p, 0,0,0,0];
+} 
+
+let metal = (r,g,b,p,s) => {
+   if (p === undefined) p = 10;
+   if (s === undefined) s = 1;
+   return [.2*r,.2*g,.2*b,0, r,g,b,0, s*r,s*g,s*b,p, 0,0,0,0];
+} 
+
+let normalize = v => {
+   let s = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+   return [v[0] / s, v[1] / s, v[2] / s];
+}
+
+let lights = [];
+
+let clearLights = () => lights = [];
+
+let addLight = (dir,color) => {
+   dir = normalize(dir);
+   let newLight = [dir[0],dir[1],dir[2], color[0],color[1],color[2], 0,0,0];
+   for (let n = 0 ; n < newLight.length ; n++)
+      lights.push(newLight[n]);
+}
+
+// NAIVE ALGORITHM FOR EVALUATING BEZIER CURVES.
+// THIS IS EASIER TO UNDERSTAND, BUT CANNOT BE OPTIMIZED.
+
+let mix = (a,b,t) => a + t * (b - a);
+
+let evalBezier1 = (P, t) => {
+   let A = mix(P[0], P[1], t);
+   let B = mix(P[1], P[2], t);
+   let C = mix(P[2], P[3], t);
+
+   return mix ( mix(A,B,t), mix(B,C,t), t );
+}
+
+// BETTER ALGORITHM FOR EVALUATING BEZIER CURVES.
+// THIS CAN BE OPTIMIZED TO RUN VERY EFFICIENTLY,
+// IF C = mxv(bezierMatrix, P) IS DONE BEFOREHAND.
+
+let bezierMatrix = [ -1,3,-3,1, 3,-6,3,0, -3,3,0,0, 1,0,0,0 ];
+
+let mxv = (m, v) => {
+   let dst = [];
+   for (let i = 0 ; i < 4 ; i++) {
+      dst[i] = 0;
+      for (let j = 0 ; j < 4 ; j++)
+         dst[i] += m[i + 4*j] * v[j];
+   }
+   return dst;
+}
+
+let evalBezier = (P, t) => {
+   let C = mxv(bezierMatrix, P);
+/*
+   return t*t*t * C[0] + t*t * C[1] + t * C[2] + C[3];
+*/
+   return C[3] + t * (C[2] + t * (C[1] + t * C[0]));
+}
+
+let evalBezierSpline = (S, t) => {
+   let T = (t % 1) * S.length;
+   let i = Math.floor(T);
+   return evalBezier(S[i], T - i);
+}
+
+let isFirstTime = true;
+
 function animate(gl) {
    let time = (Date.now() - startTime) / 1000;
-   m.identity();  
-   m.scale(Math.abs(Math.sin(time)));
-   m.rotateY(time);
-   bgColor = [.5,.6,.7];    // SET BACKGROUND COLOR
 
-   setUniform('Matrix4fv', 'uMat', false, m.value());  // SEND THE CURRENT MATRIX VALUE TO THE GPU.
    setUniform('3fv', 'uMouse', canvas1.mouseInfo);
    setUniform('1f', 'uTime', time);
-   setUniform('1f', 'uFL', 3.5);
-   setUniform('Matrix4fv', 'uM', false, [.1,.1,.1,0, .5,.5,.5,0, 1,1,1,10, 0,0,0,0]);
-   setUniform('Matrix3fv', 'uL', false, [ .57, .57, .57, bgColor[0],bgColor[1],bgColor[2], 0,0,0,
-                                         -.57,-.57,-.57, .25,.1,.05, 0,0,0]);
+
+   if (isFirstTime) {
+      isFirstTime = false;
+
+      setUniform('1f', 'uFL', 3.5);
+
+      // SPECIFY BACKGROUND COLOR AND LIGHT SOURCES
+
+      bgColor = [0,0,.1];
+      clearLights();
+      addLight([ 1, 1, 1], [1,1,1]);
+      addLight([-1,-1,-1], [.3,.3,.3]);
+      setUniform('Matrix3fv', 'uL', false, lights);
+
+      let textureImageFiles = ['earth_texture.jpg',
+                               'shapes_bumpmap.png',
+                               'love_bumpmap.png'];
+
+      let images = [];
+      let samplers = [];
+      for (let n = 0 ; n < textureImageFiles.length ; n++) {
+         images[n] = new Image();
+         samplers.push(n);
+         images[n].onload = () => {
+            try {
+               gl.activeTexture (gl.TEXTURE0 + n);
+               gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+               gl.pixelStorei   (gl.UNPACK_FLIP_Y_WEBGL, true);
+               gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[n]);
+               gl.generateMipmap(gl.TEXTURE_2D);
+            }
+            catch(e) { console.log(e); }
+         }
+         images[n].src = textureImageFiles[n];
+      }
+      setUniform('1iv', 'uSampler', samplers);
+   }
+
+   // CLEAR EVERYTHING TO THE BACKGROUND COLOR
+
+   gl.clearColor(bgColor[0],bgColor[1],bgColor[2],1);
+
+   // CREATE A SINGLE ROTATING SPHERE.
+
+   m.save();
+      m.scale(.77);
+      m.rotateX(-Math.PI*.5);
+      m.rotateZ(.2 * time);
+      drawMesh(m, sphere64x32, [.04,.04,.04,0, .5,.5,.5,0, .5,.5,.5,80, 0,0,0,0]);
+   m.restore();
 }
 
 gl_start(canvas1, vs, fs);

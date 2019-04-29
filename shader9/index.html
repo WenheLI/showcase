@@ -1,12 +1,12 @@
 <script src=lib6.js></script>
 
 <body bgcolor=black text=white link=white alink=white vlink=white>
-<center>
-<canvas id='canvas1' width=800 height=800></canvas>
-</center>
 <p>
    By clicking on the cavas, you can change the look of donut!
 </p>
+<center>
+<canvas id='canvas1' width=800 height=800></canvas>
+</center>
 </body>
 
 <!!------------------------ VERTEX SHADER ------------------------>
@@ -47,25 +47,29 @@
 <!!-------------------- FRAGMENT SHADER --------------------------->
 
 <script id='my_fragment_shader' type='x-shader/x-fragment'>
+const int NLIGHTS = 2;
 uniform float uFL;
-uniform mat3  uL[2];
+uniform mat3  uL[NLIGHTS];
 uniform mat4  uM;
 uniform float uTime;
-
-uniform sampler2D uSampler[1]; // WE NEED TO DECLARE THE TEXTURE SAMPLER
-
 uniform int state;
+
+uniform sampler2D uSampler[2];
 
 varying vec3  vNor;
 varying vec3  vPos;
-varying vec2  vUV ;            // AND THE VECTOR CONTAINING THE VARYING UV VALUES.
+varying vec2  vUV ;
 
 void main() {
    vec3 normal = normalize(vNor);
    vec3 R = reflect(vec3(0.,0.,-1.), normal);
    vec2 uv = vUV;
 
-// UNCOMMENT THE LINE BELOW TO SEE TEXTURE ANIMATION WITHIN A FRAGMENT SHADER.
+   float t = .5 + .5 * sin(3. * uTime);
+   t = t * t * (3. - t - t);
+
+   vec3 dNormal = texture2D(uSampler[1], uv * vec2(6.,3.)).xyz * 2. - 1.;
+   normal = normalize(normal + dNormal);
    if (state == 0) {
       uv.y += noise(vec3(cos(uTime/3.), sin(uTime/2.), cos(uTime/4.)));
    }else {
@@ -74,15 +78,19 @@ void main() {
       uv.x += noise(vNor);
    }
 
-
    vec3 color = uM[0].rgb;
-   for (int n = 0 ; n < 2 ; n++)
+   for (int n = 0 ; n < NLIGHTS ; n++) {
+      float d = max(0.,dot(normal, uL[n][0]));
       color += uL[n][1] * (
-         uM[1].rgb * max(0.,dot(normal, uL[n][0])) +
+         uM[1].rgb * d * d +
          uM[2].rgb * pow(max(0., dot(R, uL[n][0])), uM[2].a) );
-
-   color *= texture2D(uSampler[0], uv).xyz; // DO THE ACTUAL TEXTURE LOOK-UP.
-
+   }
+   color *= mix(vec3(1.,1.,1.),
+                texture2D(uSampler[0], uv).xyz, .7);
+/*
+   color *= mix(vec3(1.,1.,1.),
+                texture2D(uSampler[1], uv * vec2(6.,3.)).xyz, t);
+*/
    gl_FragColor = vec4(sqrt(color), 1.0);
 }
 </script>
@@ -177,14 +185,13 @@ let createTriMesh = (xyzFunc, nCols, nRows) => {
 stride = 8;
 let torus32x32 = createTriMesh(torus, 32, 32);
 let sphere16x8 = createTriMesh(sphere, 16,  8);
-let sphere32x16 = createTriMesh(sphere, 32,  16);
+let sphere64x32 = createTriMesh(sphere, 64,  32);
 
 //------------------------ ANIMATION --------------------------
 let state = true;
 document.addEventListener('click', () => {
    state = !state;
 });
-
 // YOU MIGHT WANT TO MOVE THESE SUPPORT FUNCTIONS INTO THE LIBRARY,
 // SO YOU CAN USE THEM LATER IN OTHER THINGS YOU CREATE.
 
@@ -279,24 +286,31 @@ function animate(gl) {
 
       bgColor = [0,0,.1];
       clearLights();
-      addLight([1,1,1], bgColor);
-      addLight([-1,-1,-1], [.25,.1,.05]);
+      addLight([ 1, 1, 1], [1,1,1]);
+      addLight([-1,-1,-1], [.3,.3,.3]);
       setUniform('Matrix3fv', 'uL', false, lights);
 
-      setUniform('1iv', 'uSampler', [0]);
+      let textureImageFiles = ['donut.jpg',
+                               'love_bumpmap.png'];
 
-      let image = new Image();
-      image.onload = () => {
-         try {
-	    gl.activeTexture (gl.TEXTURE0);
-	    gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
-	    gl.pixelStorei   (gl.UNPACK_FLIP_Y_WEBGL, true);
-	    gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-	    gl.generateMipmap(gl.TEXTURE_2D);
-	 }
-	 catch(e) { console.log(e); }
+      let images = [];
+      let samplers = [];
+      for (let n = 0 ; n < textureImageFiles.length ; n++) {
+         images[n] = new Image();
+         samplers.push(n);
+         images[n].onload = () => {
+            try {
+               gl.activeTexture (gl.TEXTURE0 + n);
+               gl.bindTexture   (gl.TEXTURE_2D, gl.createTexture());
+               gl.pixelStorei   (gl.UNPACK_FLIP_Y_WEBGL, true);
+               gl.texImage2D    (gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, images[n]);
+               gl.generateMipmap(gl.TEXTURE_2D);
+            }
+            catch(e) { console.log(e); }
+         }
+         images[n].src = textureImageFiles[n];
       }
-      image.src = 'donut.jpg';
+      setUniform('1iv', 'uSampler', samplers);
    }
 
    // CLEAR EVERYTHING TO THE BACKGROUND COLOR
@@ -307,9 +321,9 @@ function animate(gl) {
 
    m.save();
       m.scale(.5);
-      m.rotateX(-Math.PI*.35);
+      m.rotateX(-Math.PI*.09*time);
       m.rotateZ(.2 * time);
-      drawMesh(m, torus32x32, plastic(1,1,1));
+      drawMesh(m, torus32x32, [.04,.04,.04,0, .5,.5,.5,0, .5,.5,.5,80, 0,0,0,0]);
    m.restore();
 }
 
