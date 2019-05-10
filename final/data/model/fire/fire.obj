@@ -1,10 +1,10 @@
 # MagicaVoxel @ Ephtracy
 
 # group
-g huo
+g fire
 
 # material
-mtllib huo.mtl
+mtllib fire.mtl
 usemtl palette
 
 # normals

@@ -2,7 +2,34 @@ let scene, camera, renderer, clock, deltaTime, totalTime;
 
 let arToolkitSource, artoolkitContext;
 
-let mirrorMarker, fireMarker;
+let mirrorMarker;
+
+let materials = {};
+
+let makeMarker = (markerName) => {
+    let marker = new THREE.Group();
+    marker.name = markerName+'Marker';
+    scene.add(marker);
+
+    let fireMakerController = new THREEx.ArMarkerControls(artoolkitContext, marker, {
+        type: 'pattern',
+        patternUrl: `data/patterns/${markerName}.patt`
+    });
+    console.log(markerName)
+
+    let mtlLoader = new THREE.MTLLoader();
+
+    mtlLoader.load(`data/model/${markerName}/${markerName}.mtl`, (material) => {
+        material.preload();
+        let objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(material);
+        objLoader.load(`data/model/${markerName}/${markerName}.obj`,(obj) => {
+            obj.name = markerName;
+            obj.scale.set(.03, .03, .03);
+            marker.add(obj);
+        });
+    });
+}
 
 let makeReflectionMaterial = () => {
     let videoTexture = new THREE.VideoTexture(arToolkitSource.domElement);
@@ -91,45 +118,50 @@ let initalize = () => {
     });
 
     let cube = new THREE.BoxBufferGeometry(1, 1, 1);
-    let loader = new THREE.TextureLoader();
 
-    let texture = loader.load('../shader9/donut.jpg', render);
-
-    let material1 = new THREE.MeshBasicMaterial({
-        map: texture,
-    });
 
     let mirror = new THREE.Mesh(cube, makeReflectionMaterial());
     mirror.name = 'mirror';
     mirrorMarker.add(mirror);
 
-    fireMarker = new THREE.Group();
-    fireMarker.name = 'fireMarker';
-    scene.add(fireMarker);
-
-    let fireMakerController = new THREEx.ArMarkerControls(artoolkitContext, fireMarker, {
-        type: 'pattern',
-        patternUrl: 'data/patterns/fire_pattern.patt'
-    });
+    //fire 
+    makeMarker('fire');
+    //woods
+    makeMarker('woods');
+    //water
+    makeMarker('water');
 
 
-    let mtlLoader = new THREE.MTLLoader();
-
-    mtlLoader.load('model/huo/huo.obj', (material) => {
-        let objLoader = new THREE.OBJLoader();
-        objLoader.setMaterials(material);
-        objLoader.load('model/huo/huo.obj',(obj) => {
-            fireMarker.add(obj);
-        });
-    });
-    fire.name = 'fire';
 };
 
 let update = () => {
     if (arToolkitSource.ready) {
         artoolkitContext.update(arToolkitSource.domElement);
+
         scene.getObjectByName('mirror').rotation.x += Math.PI/100;
-        
+        scene.getObjectByName('fire').rotation.y += Math.PI/100;
+
+        if (Object.keys(materials).length === 0) {
+            materials['fire'] = scene.getObjectByName('fire').children[0].material;
+            materials['woods'] = scene.getObjectByName('woods').children[0].material;
+        }
+
+        let fireMarker = scene.getObjectByName('fireMarker');
+        let woodsMarker = scene.getObjectByName('woodsMarker');
+
+        if (fireMarker.position.length() !== 0 && woodsMarker.position.length() !== 0) {
+            let woods = scene.getObjectByName('woods');
+
+            if (fireMarker.position.distanceTo(woodsMarker.position) <= 1.5) {
+                woods.traverse((c) => {
+                    if (c instanceof THREE.Mesh) c.material = materials['fire'];          
+                });
+            } else {
+                woods.traverse((c) => {
+                    if (c instanceof THREE.Mesh) c.material = materials['woods'];            
+                });
+            }
+        }        
     }
 };
 
