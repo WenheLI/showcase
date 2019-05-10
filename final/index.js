@@ -113,46 +113,16 @@ let initalize = () => {
     });
 
 
+    let mtlLoader = new THREE.MTLLoader();
 
-
-    let ddsLoader = new THREE.DDSLoader();
-
-    let map1 = ddsLoader.load( 'data/compressed/disturb_dxt1_nomip.dds' );
-    map1.minFilter = map1.magFilter = THREE.LinearFilter;
-    map1.anisotropy = 4;
-
-    let map2 = ddsLoader.load( 'data/compressed/disturb_dxt1_mip.dds' );
-    map2.anisotropy = 4;
-
-    let map3 = ddsLoader.load( 'data/compressed/hepatica_dxt3_mip.dds' );
-    map3.anisotropy = 4;
-
-    let fireTexture = ddsLoader.load( 'data/compressed/explosion_dxt5_mip.dds' );
-    fireTexture.anisotropy = 4; //fire
-
-    let map5 = ddsLoader.load( 'data/compressed/disturb_argb_nomip.dds' );
-    map5.minFilter = map5.magFilter = THREE.LinearFilter;
-    map5.anisotropy = 4;
-
-    let map6 = ddsLoader.load( 'data/compressed/disturb_argb_mip.dds' ); //stone
-    map6.anisotropy = 4;
-
-
-    var cubemap3 = ddsLoader.load( 'data/compressed/Mountains_argb_nomip.dds', ( texture ) => {
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearFilter;
-        texture.mapping = THREE.CubeReflectionMapping;
-        material6.needsUpdate = true;
-    } ); //steel
-
-    let fireMaterial = new THREE.MeshBasicMaterial( { map: fireTexture, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: false, transparent: true });
-
-    let fire = new THREE.Mesh(cube, fireMaterial);
+    mtlLoader.load('model/huo/huo.obj', (material) => {
+        let objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(material);
+        objLoader.load('model/huo/huo.obj',(obj) => {
+            fireMarker.add(obj);
+        });
+    });
     fire.name = 'fire';
-    fireMarker.add(fire);
-
-
-
 };
 
 let update = () => {
