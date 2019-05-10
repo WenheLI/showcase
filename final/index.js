@@ -131,7 +131,6 @@ let initalize = () => {
     //water
     makeMarker('water');
 
-
 };
 
 let update = () => {
