@@ -5,6 +5,15 @@ let arToolkitSource, artoolkitContext;
 let mirrorMarker;
 
 let materials = {};
+let controllers = {};
+
+let mouse = new THREE.Vector2();
+let raycaster = new THREE.Raycaster();
+
+window.addEventListener('mousemove', (e) => {
+	mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}, false);
 
 let makeMarker = (markerName) => {
     let marker = new THREE.Group();
@@ -15,6 +24,9 @@ let makeMarker = (markerName) => {
         type: 'pattern',
         patternUrl: `data/patterns/${markerName}.patt`
     });
+
+    controllers[markerName] = fireMakerController;
+
     console.log(markerName)
 
     let mtlLoader = new THREE.MTLLoader();
@@ -25,7 +37,8 @@ let makeMarker = (markerName) => {
         objLoader.setMaterials(material);
         objLoader.load(`data/model/${markerName}/${markerName}.obj`,(obj) => {
             obj.name = markerName;
-            obj.scale.set(.03, .03, .03);
+            if (markerName === 'cat') obj.scale.set(.003, .003, .003);
+            else obj.scale.set(.03, .03, .03);
             marker.add(obj);
         });
     });
@@ -130,8 +143,12 @@ let initalize = () => {
     makeMarker('woods');
     //water
     makeMarker('water');
-
+    //cat
+    makeMarker('cat');
 };
+
+let speedX = .01;
+let speedY = .01;
 
 let update = () => {
     if (arToolkitSource.ready) {
@@ -143,6 +160,14 @@ let update = () => {
         if (Object.keys(materials).length === 0) {
             materials['fire'] = scene.getObjectByName('fire').children[0].material;
             materials['woods'] = scene.getObjectByName('woods').children[0].material;
+        }
+
+        let cat = scene.getObjectByName('cat');
+
+        if (cat.position.length() > 4) cat.position.set(0, 0, 0);
+        else {
+            cat.position.x += speedX;
+            cat.position.y += speedY;
         }
 
         let fireMarker = scene.getObjectByName('fireMarker');
@@ -163,8 +188,11 @@ let update = () => {
         }        
     }
 };
-
+console.log(ARjs)
 let render = () => {
+    raycaster.setFromCamera(camera.position, mouse);
+    let intersects = raycaster.intersectObjects(scene.children);
+    console.log(intersects)
     renderer.render(scene, camera);
 };
 
