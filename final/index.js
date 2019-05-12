@@ -20,12 +20,12 @@ let makeMarker = (markerName) => {
     marker.name = markerName+'Marker';
     scene.add(marker);
 
-    let fireMakerController = new THREEx.ArMarkerControls(artoolkitContext, marker, {
+    let controller = new THREEx.ArMarkerControls(artoolkitContext, marker, {
         type: 'pattern',
         patternUrl: `data/patterns/${markerName}.patt`
     });
 
-    controllers[markerName] = fireMakerController;
+    controllers[markerName] = controller;
 
     console.log(markerName)
 
@@ -65,6 +65,30 @@ let makeReflectionMaterial = () => {
 }
 
 let initalize = () => {
+
+    document.addEventListener('keydown', (k) => {
+        switch (k.key) {
+            case 'w':
+                let cat = scene.getObjectByName('cat');
+                cat.position.x += .1;
+                break;
+            case 's':
+                let cat = scene.getObjectByName('cat');
+                cat.position.x -= .1;
+                break;
+            case 'a':
+                let cat = scene.getObjectByName('cat');
+                cat.position.z -= .1;
+                break;
+            case 'd':
+                let cat = scene.getObjectByName('cat');
+                cat.position.z += .1;
+                break;
+            default:
+                break;
+        }
+    });
+
     scene = new THREE.Scene();
 
     let ambientLight = new THREE.AmbientLight(0xcccccc, 1.0);
@@ -162,13 +186,6 @@ let update = () => {
             materials['woods'] = scene.getObjectByName('woods').children[0].material;
         }
 
-        let cat = scene.getObjectByName('cat');
-
-        if (cat.position.length() > 4) cat.position.set(0, 0, 0);
-        else {
-            cat.position.x += speedX;
-            cat.position.y += speedY;
-        }
 
         let fireMarker = scene.getObjectByName('fireMarker');
         let woodsMarker = scene.getObjectByName('woodsMarker');
@@ -188,11 +205,10 @@ let update = () => {
         }        
     }
 };
-console.log(ARjs)
 let render = () => {
-    raycaster.setFromCamera(camera.position, mouse);
-    let intersects = raycaster.intersectObjects(scene.children);
-    console.log(intersects)
+    // raycaster.setFromCamera(camera.position, mouse);
+    // let intersects = raycaster.intersectObjects(scene.children);
+    // console.log(intersects)
     renderer.render(scene, camera);
 };
 
