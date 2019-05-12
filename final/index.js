@@ -7,6 +7,8 @@ let mirrorMarker;
 let materials = {};
 let controllers = {};
 
+let cat;
+
 let mouse = new THREE.Vector2();
 let raycaster = new THREE.Raycaster();
 
@@ -69,19 +71,19 @@ let initalize = () => {
     document.addEventListener('keydown', (k) => {
         switch (k.key) {
             case 'w':
-                let cat = scene.getObjectByName('cat');
+                cat = scene.getObjectByName('cat');
                 cat.position.x += .1;
                 break;
             case 's':
-                let cat = scene.getObjectByName('cat');
+                cat = scene.getObjectByName('cat');
                 cat.position.x -= .1;
                 break;
             case 'a':
-                let cat = scene.getObjectByName('cat');
+                cat = scene.getObjectByName('cat');
                 cat.position.z -= .1;
                 break;
             case 'd':
-                let cat = scene.getObjectByName('cat');
+                cat = scene.getObjectByName('cat');
                 cat.position.z += .1;
                 break;
             default:

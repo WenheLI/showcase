@@ -1,50 +1,57 @@
-<!doctype HTML>
 <html>
-  <head>
-    	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/104/three.js"></script>
-      <!-- include jsartookit -->
-      <script src="lib/jsartoolkit5/artoolkit.min.js"></script>
-      <script src="lib/jsartoolkit5/artoolkit.api.js"></script>
-      <!-- include threex.artoolkit -->
-      <script src="lib/threex/threex-artoolkitsource.js"></script>
-      <script src="lib/threex/threex-artoolkitcontext.js"></script>
-      <script src="lib/threex/threex-arbasecontrols.js"></script>
-      <script src="lib/threex/threex-armarkercontrols.js"></script>
+<head>
+    <title>Final Project</title>
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet" />
+    <link href="https://unpkg.com/nes.css/css/nes.min.css" rel="stylesheet" />
+    <link href="./index.css" rel="stylesheet" />
+</head>
 
-      <script src="./lib/MTLLoader.js"></script>
-      <script src="./lib/OBJLoader.js"></script>
-    </head>
+<body>
+    <div class="nes-container with-title is-centered">
+        <p class="title">What is is?</p>
+        <p>This is a try for utilizing ar in the browser. In this project, users can use a set of AR markers(attached
+            below) to display
+            various objects. Ideally, different objects will effect each other if they are close. And you can use your
+            keyboard to control some objects. While, it is only partially done due to the limited time.</p>
 
-  <body style='margin : 0px; overflow: hidden;'>
-    <script id="vertexShader" type="x-shader/x-vertex">
-      uniform float refractionRatio;
-      varying vec3 vRefract;
-      void main() { 
-        vec4 mPosition = modelMatrix * vec4( position, 1.0 );
-        vec3 nWorld = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
-        vRefract = normalize( refract( normalize( mPosition.xyz - cameraPosition ), nWorld, refractionRatio ) );
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-      }
-    </script>
+    </div>
 
-    <script id="fragmentShader" type="x-shader/x-vertex"> 
-      uniform sampler2D texture;
-      varying vec3 vRefract;
-      uniform float distance;
-      uniform float opacity;
-      uniform vec3 tint;
-      void main() {
-        vec2 p = vec2( vRefract.x * distance + 0.5, vRefract.y * distance + 0.5 );
-        p = vec2(1.0, 1.0) - p;
-        vec3 color = texture2D( texture, p ).rgb;
-        gl_FragColor = vec4( color, opacity ) * vec4( tint, 1.0 );
-      }  
-      </script>
+    <div class="nes-container with-title is-centered">
+            <p class="title">Link</p>
+    <button type="button" class="nes-btn is-success" onclick="window.location.href='./project.html'">Final Project</button>
+    
+        </div>
 
-    <script src="./index.js">
-      
-    </script>
-  </body>
+    <div class="nes-container with-title is-centered">
+        <p class="title">Ar markers</p>
+        <div class="image-case">
+            <div class="image-entity">
+                <img src="../ar-marker/cat_marker.png" />
+                <p>Cat</p>
+            </div>
+
+            <div class="image-entity">
+                <img src="../ar-marker/fire_marker.png" />
+                <p>fire</p>
+            </div>
+            <div class="image-entity">
+                <img src="../ar-marker/water_marker.png" />
+                <p>water</p>
+            </div>
+            <div class="image-entity">
+                <img src="../ar-marker/woods_marker.png" />
+                <p>woods</p>
+            </div>
+            <div class="image-entity">
+                <img src="https://github.com/jeromeetienne/AR.js/blob/master/data/images/HIRO.jpg?raw=true" />
+                <p>Mirror</p>
+            </div>
+            
+        </div>
+
+    </div>
+
+</body>
+
 </html>
